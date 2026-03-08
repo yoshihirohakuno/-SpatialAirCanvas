@@ -1,4 +1,5 @@
 import { useStore } from '../store';
+import { Eye, PenTool, Undo2, Trash2 } from 'lucide-react';
 
 const COLORS = [
     '#ff0055', // Neon Red
@@ -9,71 +10,119 @@ const COLORS = [
 ];
 
 export const UI = () => {
-    const { currentColor, setColor, viewMode, toggleViewMode, strokes } = useStore();
+    const { currentColor, setColor, viewMode, toggleViewMode, strokes, undoStroke, clearStrokes } = useStore();
 
     return (
-        <div style={{
-            position: 'absolute',
-            bottom: '20px',
-            left: '50%',
-            transform: 'translateX(-50%)',
-            zIndex: 10,
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            gap: '1rem',
-            pointerEvents: 'auto', // Ensure clicks pass through
-        }}>
+        <>
+            {/* Actions Container - Bottom Left */}
+            <div className="glass-panel" style={{
+                position: 'absolute',
+                bottom: '20px',
+                left: '20px',
+                zIndex: 10,
+                display: 'flex',
+                flexDirection: 'column', // Stack vertically if cramped? Let's use horizontal for now. Or follow user's "small in bottom left"
+                gap: '10px',
+                padding: '12px',
+                borderRadius: '16px',
+                pointerEvents: 'auto',
+            }}>
 
-            {/* Mode Toggle */}
-            <button
-                onClick={toggleViewMode}
-                style={{
-                    padding: '10px 20px',
-                    borderRadius: '20px',
-                    border: 'none',
-                    background: viewMode ? '#ffffff' : '#333333',
-                    color: viewMode ? '#000000' : '#ffffff',
-                    fontWeight: 'bold',
-                    cursor: 'pointer',
-                    boxShadow: '0 4px 6px rgba(0,0,0,0.3)',
-                }}
-            >
-                {viewMode ? 'Back to Drawing' : 'View Mode'}
-            </button>
+                <div style={{ display: 'flex', gap: '10px' }}>
+                    <button
+                        className={`glass-button ${viewMode ? 'active' : ''}`}
+                        onClick={toggleViewMode}
+                        style={{
+                            padding: '10px',
+                            borderRadius: '12px',
+                            border: 'none',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                        }}
+                        title={viewMode ? 'Draw Mode' : 'View Mode'}
+                    >
+                        {viewMode ? <PenTool size={16} /> : <Eye size={16} />}
+                    </button>
 
-            {/* Color Palette */}
+                    <button
+                        className="glass-button"
+                        onClick={undoStroke}
+                        disabled={strokes.length === 0}
+                        style={{
+                            padding: '10px',
+                            borderRadius: '12px',
+                            cursor: strokes.length === 0 ? 'not-allowed' : 'pointer',
+                            opacity: strokes.length === 0 ? 0.5 : 1,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            border: 'none',
+                        }}
+                        title="Undo"
+                    >
+                        <Undo2 size={16} />
+                    </button>
+
+                    <button
+                        className="glass-button"
+                        onClick={clearStrokes}
+                        disabled={strokes.length === 0}
+                        style={{
+                            padding: '10px',
+                            borderRadius: '12px',
+                            cursor: strokes.length === 0 ? 'not-allowed' : 'pointer',
+                            opacity: strokes.length === 0 ? 0.5 : 1,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            color: strokes.length > 0 ? '#ff4444' : 'inherit',
+                            border: 'none',
+                        }}
+                        title="Clear All"
+                    >
+                        <Trash2 size={16} />
+                    </button>
+                </div>
+            </div>
+
+            {/* Colors Container - Bottom Center */}
             {!viewMode && (
-                <div style={{
+                <div className="glass-panel" style={{
+                    position: 'absolute',
+                    bottom: '20px',
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    zIndex: 10,
                     display: 'flex',
-                    gap: '10px',
-                    background: 'rgba(0,0,0,0.5)',
-                    padding: '10px',
-                    borderRadius: '30px',
-                    backdropFilter: 'blur(10px)',
+                    gap: '12px',
+                    padding: '8px',
+                    borderRadius: '20px',
+                    pointerEvents: 'auto',
                 }}>
                     {COLORS.map((color) => (
                         <button
                             key={color}
                             onClick={() => setColor(color)}
                             style={{
-                                width: '30px',
-                                height: '30px',
+                                width: '32px',
+                                height: '32px',
+                                minWidth: '32px', // Prevent shrinking
+                                minHeight: '32px', // Prevent shrinking
+                                padding: 0, // Reset default padding
                                 borderRadius: '50%',
                                 background: color,
-                                border: currentColor === color ? '3px solid white' : 'none',
+                                border: currentColor === color ? '3px solid white' : '2px solid transparent',
                                 cursor: 'pointer',
-                                transition: 'transform 0.2s',
-                                transform: currentColor === color ? 'scale(1.2)' : 'scale(1)',
+                                transition: 'all 0.2s',
+                                transform: currentColor === color ? 'scale(1.15)' : 'scale(1)',
+                                boxShadow: currentColor === color ? `0 0 15px ${color}` : `0 0 5px ${color}80`,
                             }}
                         />
                     ))}
                 </div>
             )}
-
-            <div style={{ color: '#666', fontSize: '12px' }}>
-                Strokes: {strokes.length}
-            </div>
-        </div>
+        </>
     );
 };

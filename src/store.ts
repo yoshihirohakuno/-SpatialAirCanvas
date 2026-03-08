@@ -36,6 +36,8 @@ interface AppState {
     endStroke: () => void;
     setColor: (color: string) => void;
     toggleViewMode: () => void;
+    undoStroke: () => void;
+    clearStrokes: () => void;
 }
 
 export const useStore = create<AppState>((set, get) => ({
@@ -46,7 +48,7 @@ export const useStore = create<AppState>((set, get) => ({
     strokes: [],
     currentStrokeId: null,
     currentColor: '#00ffcc', // Default neon cyan
-    currentLineWidth: 0.1,
+    currentLineWidth: 0.033, // Reduced to approx 2/3 of 0.05
 
     viewMode: false,
 
@@ -85,11 +87,15 @@ export const useStore = create<AppState>((set, get) => ({
 
             const newStrokes = strokes.map((stroke) => {
                 if (stroke.id === currentStrokeId) {
-                    // Prevent adding points that are too close
                     const lastPoint = stroke.points[stroke.points.length - 1];
+
                     if (lastPoint) {
                         const dist = lastPoint.position.distanceTo(point);
-                        if (dist < 0.01) return stroke;
+                        // Further reduce distance threshold to almost nothing so points never drop when moving fast
+                        if (dist < 0.001) return stroke;
+
+                        // Stronger smoothing so the line stays connected without jagged edges
+                        point.lerp(lastPoint.position, 0.5);
                     }
 
                     return {
@@ -111,4 +117,8 @@ export const useStore = create<AppState>((set, get) => ({
     setColor: (color) => set({ currentColor: color }),
 
     toggleViewMode: () => set((state) => ({ viewMode: !state.viewMode })),
+
+    undoStroke: () => set((state) => ({ strokes: state.strokes.slice(0, -1) })),
+
+    clearStrokes: () => set({ strokes: [] }),
 }));

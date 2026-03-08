@@ -15,18 +15,18 @@ function App() {
       {/* Instructions Overlay */}
       <div style={{
         position: 'absolute',
-        top: '20px',
-        left: '20px',
+        top: '10px',
+        left: '10px',
         color: 'white',
         zIndex: 5,
         pointerEvents: 'none',
-        textShadow: '0 2px 4px rgba(0,0,0,0.8)',
+        opacity: 0.5,
+        fontSize: '10px',
+        fontFamily: 'monospace',
       }}>
-        <h1 style={{ margin: 0, fontSize: '1.5rem' }}>Spatial Air Canvas</h1>
-        <p style={{ margin: '5px 0', opacity: 0.8 }}>
-          Pinch index & thumb to draw.<br />
-          Move hand closer/further for depth.
-        </p>
+        SpatialAirCanvas v1.0<br />
+        [Draw] Pinch Index+Thumb<br />
+        [Depth] Move Hand In/Out
       </div>
     </>
   );

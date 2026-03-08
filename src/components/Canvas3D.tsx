@@ -1,7 +1,7 @@
 import { useRef, useMemo } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
-import { OrbitControls, Sphere } from '@react-three/drei';
-import { EffectComposer, Bloom } from '@react-three/postprocessing';
+import { OrbitControls, Sphere, Stars } from '@react-three/drei';
+import { EffectComposer, Bloom, Vignette } from '@react-three/postprocessing';
 import * as THREE from 'three';
 import { useStore } from '../store';
 
@@ -12,8 +12,9 @@ const StrokeMesh = ({ stroke }: { stroke: any }) => {
         if (stroke.points.length < 2) return null;
 
         const points = stroke.points.map((p: any) => p.position);
-        // CatmullRomCurve3 for smooth curves
-        const curve = new THREE.CatmullRomCurve3(points);
+        // CatmullRomCurve3: points, closed, curveType, tension
+        // Using 'centripetal' curveType with 0.5 tension creates very natural, round curves
+        const curve = new THREE.CatmullRomCurve3(points, false, 'centripetal', 0.5);
         // TubeGeometry: path, tubularSegments, radius, radialSegments, closed
         return new THREE.TubeGeometry(curve, points.length * 6, stroke.lineWidth, 8, false);
     }, [stroke.points, stroke.lineWidth]);
@@ -66,6 +67,7 @@ const SceneContent = () => {
         <>
             <ambientLight intensity={0.5} />
             <pointLight position={[10, 10, 10]} intensity={1} />
+            <Stars radius={100} depth={50} count={5000} factor={4} saturation={0} fade speed={1} />
 
             {strokes.map((stroke) => (
                 <StrokeMesh key={stroke.id} stroke={stroke} />
@@ -76,7 +78,8 @@ const SceneContent = () => {
             {viewMode && <OrbitControls makeDefault />}
 
             <EffectComposer>
-                <Bloom luminanceThreshold={1} mipmapBlur intensity={1.5} radius={0.8} />
+                <Bloom luminanceThreshold={0.2} mipmapBlur intensity={2.5} radius={0.6} />
+                <Vignette eskil={false} offset={0.1} darkness={1.1} />
             </EffectComposer>
         </>
     );

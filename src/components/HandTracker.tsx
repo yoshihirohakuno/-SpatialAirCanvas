@@ -6,6 +6,7 @@ import { useStore } from '../store';
 
 export const HandTracker = () => {
     const videoRef = useRef<HTMLVideoElement>(null);
+    const previousPositionRef = useRef<THREE.Vector3 | null>(null);
     const { setCursor, setIsDrawing, addPointToStroke, viewMode } = useStore();
 
     useEffect(() => {
@@ -59,8 +60,8 @@ export const HandTracker = () => {
                 Math.pow(indexTip.z - thumbTip.z, 2)
             );
 
-            // Threshold for pinch (tune this value)
-            const PINCH_THRESHOLD = 0.05;
+            // Threshold for pinch (Relaxed to allow looser pinch for continuous smooth drawing)
+            const PINCH_THRESHOLD = 0.08;
             const isPinching = distance < PINCH_THRESHOLD;
 
             setIsDrawing(isPinching);
@@ -74,44 +75,35 @@ export const HandTracker = () => {
             // Let's assume standard webcam mirror: moving right hand to right side of screen = x increases.
             // In 3D, x positive is right.
 
-            const x = (1 - indexTip.x) * 10 - 5; // Map 0..1 to -5..5
-            const y = (1 - indexTip.y) * 6 - 3;  // Map 0..1 to -3..3 (approx 16:9 aspect)
+            // Apply smoothing for significantly better line precision
+            // We use a ref to store the previous smoothed position
+            const targetX = (1 - indexTip.x) * 10 - 5;
+            const targetY = (1 - indexTip.y) * 6 - 3;
+            const targetZ = -indexTip.z * 5;
 
-            // Z estimation. indexTip.z is relative to wrist. 
-            // We might want absolute depth. MediaPipe doesn't give absolute metric depth easily without depth sensor.
-            // However, we can use the size of the hand or just the raw Z if it's consistent enough.
-            // Let's try to use a multiplier on the raw Z for now.
-            // const z = -indexTip.z * 10;
-            // Actually MediaPipe Z: "The z coordinate represents the landmark depth with the depth at the wrist being the origin, and the smaller the value the closer the landmark is to the camera."
-            // So negative Z = closer to camera.
-            // In Three.js, positive Z is towards the viewer.
-            // So we can map MediaPipe Z directly-ish.
+            // Normal smoothing factor (balances speed and denoising)
+            const SMOOTHING_FACTOR = 0.5;
 
-            const position = new THREE.Vector3(x, y, 0); // Start with 0 Z for safety, refine later.
-
-            // Let's use a simpler mapping for Z for now: just fixed plane or simple depth
-            // For "Air Canvas", we want Z control.
-            // Let's try to use the Z value from landmarks but scaled.
-            // Or better: Use the "World Landmarks" if available? 
-            // results.multiHandWorldLandmarks gives real world coordinates (meters).
-
-            if (results.multiHandWorldLandmarks) {
-                // World landmarks are centered at the hip usually? No, for hands it's relative to wrist.
-                // Let's stick to normalized landmarks for screen mapping + Z scaling.
+            if (!previousPositionRef.current) {
+                previousPositionRef.current = new THREE.Vector3(targetX, targetY, targetZ);
             }
 
-            // Refined Z:
-            // We want to be able to reach "in" and "out".
-            // Let's just use the normalized Z * scale.
-            position.z = -indexTip.z * 5; // Scale it up.
+            const smoothedX = previousPositionRef.current.x + (targetX - previousPositionRef.current.x) * SMOOTHING_FACTOR;
+            const smoothedY = previousPositionRef.current.y + (targetY - previousPositionRef.current.y) * SMOOTHING_FACTOR;
+            const smoothedZ = previousPositionRef.current.z + (targetZ - previousPositionRef.current.z) * SMOOTHING_FACTOR;
 
-            setCursor(position, true);
+            const position = new THREE.Vector3(smoothedX, smoothedY, smoothedZ);
+            previousPositionRef.current.copy(position);
+
+            setCursor(position.clone(), true);
 
             if (isPinching) {
-                addPointToStroke(position);
+                // Ensure we don't start a stroke repeatedly when already drawing
+                addPointToStroke(position.clone());
             }
 
         } else {
+            previousPositionRef.current = null; // Reset smoothing when hand is lost
             setCursor(new THREE.Vector3(0, 0, 0), false);
             setIsDrawing(false);
         }
