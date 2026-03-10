@@ -7,41 +7,61 @@ import { useStore } from '../store';
 export const HandTracker = () => {
     const videoRef = useRef<HTMLVideoElement>(null);
     const previousPositionRef = useRef<THREE.Vector3 | null>(null);
-    const { setCursor, setIsDrawing, addPointToStroke, viewMode } = useStore();
+    const { setCursor, setIsDrawing, addPointToStroke, viewMode, setCameraPermission } = useStore();
 
     useEffect(() => {
         if (!videoRef.current) return;
 
-        const hands = new Hands({
-            locateFile: (file) => {
-                return `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`;
-            },
-        });
+        let camera: Camera | null = null;
+        let isComponentMounted = true;
 
-        hands.setOptions({
-            maxNumHands: 1,
-            modelComplexity: 1,
-            minDetectionConfidence: 0.5,
-            minTrackingConfidence: 0.5,
-        });
+        const initCamera = async () => {
+            try {
+                // First explicitly request camera permission so we can catch errors
+                await navigator.mediaDevices.getUserMedia({ video: true });
+                if (!isComponentMounted) return;
 
-        hands.onResults(onResults);
+                setCameraPermission('granted');
 
-        const camera = new Camera(videoRef.current, {
-            onFrame: async () => {
-                if (videoRef.current) {
-                    await hands.send({ image: videoRef.current });
+                const hands = new Hands({
+                    locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`,
+                });
+
+                hands.setOptions({
+                    maxNumHands: 1,
+                    modelComplexity: 1,
+                    minDetectionConfidence: 0.5,
+                    minTrackingConfidence: 0.5,
+                });
+
+                hands.onResults(onResults);
+
+                camera = new Camera(videoRef.current!, {
+                    onFrame: async () => {
+                        if (videoRef.current) {
+                            await hands.send({ image: videoRef.current });
+                        }
+                    },
+                    width: 1280,
+                    height: 720,
+                });
+
+                await camera.start();
+            } catch (err: any) {
+                console.error("Failed to acquire camera feed:", err);
+                if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+                    setCameraPermission('denied');
                 }
-            },
-            width: 1280,
-            height: 720,
-        });
+            }
+        };
 
-        camera.start();
+        initCamera();
 
         return () => {
-            camera.stop();
-            // hands.close(); // Cleanup if needed
+            isComponentMounted = false;
+            if (camera) {
+                camera.stop();
+            }
         };
     }, []);
 

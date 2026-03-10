@@ -28,6 +28,10 @@ interface AppState {
     // View State
     viewMode: boolean; // false = Draw, true = View (Orbit)
 
+    // Camera State
+    cameraPermission: 'prompt' | 'granted' | 'denied';
+    setCameraPermission: (status: 'prompt' | 'granted' | 'denied') => void;
+
     // Actions
     setCursor: (pos: THREE.Vector3, detected: boolean) => void;
     setIsDrawing: (drawing: boolean) => void;
@@ -41,6 +45,8 @@ interface AppState {
 }
 
 export const useStore = create<AppState>((set, get) => ({
+    cameraPermission: 'prompt',
+    setCameraPermission: (status) => set({ cameraPermission: status }),
     cursorPosition: new THREE.Vector3(0, 0, 0),
     isDrawing: false,
     handDetected: false,
